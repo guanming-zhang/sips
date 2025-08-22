@@ -1,3 +1,5 @@
+This codebase is derived from https://github.com/guanming-zhang/sips, created by Guanming Zhang. The original license and copyright notices have been preserved. 
+This version contains implementation of pairwise, correlated random-organizing systems (random organization, biased random organization, and stochastic gradient descent).
 
 ░██████╗██╗██████╗░░██████╗
 ██╔════╝██║██╔══██╗██╔════╝
@@ -34,12 +36,12 @@ c) cmake --build .
 d) ./test_main --gtest_filter=SIP*
 
 What are we simulating? 
-we are simulating dynamical equations for partilce systems, to be more specific
-a)
+We are simulating dynamical equations for particle systems.
 
 structure of the C++ code(sips)
 1) biased random orgainization 
 2) stochastic gradient descent for particles 
+3) random organization
 3) stochastic process with multiplicative noise 
 
 folders
@@ -50,14 +52,19 @@ folders
         1) BRO with particle-wise kick
         2) BRO with reciprocal, pairwise kick
         3) BRO with nonreciprocal, pairwise kick (*likely to be Sam's method)
+        4) BRO with correlated, pairwise kick
     sgd_algorithms.hpp
         1) SGD with selective, pairwise batch
         2) SGD with probablistic, pairwise batch
         3) SGD with selective, particlewise batch
         4) SGD with probablistic, particlewise batch
+        5) SGD with probabilistic, correlated pairwise batch
+    ro_algorithms.hpp
+        1) RO with correlated, pairwise kick
     stocastic_algotithms.hpp
         1) particlewise stochastic dynamics
         2) pairwise stochastic dynamics
+        3) correlated pairwise stochastic dynamics with thermal noise
 ----hyperalg:
         hyperalg classes
 ----sips:

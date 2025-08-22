@@ -5,7 +5,7 @@ sys.path.append('./utils')
 from sips import algorithms
 import numpy as np
 import json
-import Utils
+# import Utils
 import time
 import math
 
@@ -19,8 +19,12 @@ class Info:
             input_dict = json.loads(fs.read())
         self.input_dict = input_dict
         self.loc = input_dir
-        compulsory_keys = ["N","dim","n_steps","n_save","n_rec","box_size","phi",
+        # compulsory_keys = ["N","dim","n_steps","n_save","n_rec","box_size","phi",
+        #                    "optimization_method","init_config"]
+        
+        compulsory_keys = ["N","r","dim","n_steps","n_save","n_rec","box_size","phi",
                            "optimization_method","init_config"]
+
         #--------------general information -------------------
         print("--------Input info:--------")
         print(json.dumps(input_dict,indent=4))
@@ -35,10 +39,21 @@ class Info:
         if self.dim != len(self.box_size):
             raise ValueError("the box size and the dimension does not match")
         # calculate the radius
-        v0 = math.pow(math.pi,0.5*self.dim)/math.gamma(0.5*self.dim + 1.0)
-        v_box = np.prod(self.box_size)
-        self.r = math.pow(self.phi*v_box/(self.N*v0),1.0/self.dim)
-        input_dict["r"] = self.r
+        # v0 = math.pow(math.pi,0.5*self.dim)/math.gamma(0.5*self.dim + 1.0)
+        # v_box = np.prod(self.box_size)
+        # self.r = math.pow(self.phi*v_box/(self.N*v0),1.0/self.dim)
+        # input_dict["r"] = self.r
+
+        # # change N to change phi
+        # v0_r = (math.pow(math.pi,0.5*self.dim)/math.gamma(0.5*self.dim + 1.0))*(math.pow(self.r,self.dim))
+        # v_box = np.prod(self.box_size)
+        # self.N = int((self.phi*v_box)/v0_r)
+        # input_dict["N"] = self.N
+
+        # change L to change phi
+        v0_r = (math.pow(math.pi,0.5*self.dim)/math.gamma(0.5*self.dim + 1.0))*(math.pow(self.r,self.dim))
+        self.box_size = [math.pow((self.N*v0_r)/self.phi,1.0/self.dim)]*self.dim
+        input_dict["box_size"] = self.box_size
         
         if not "save_mode" in input_dict:
             self.save_mode = "concise"
@@ -67,11 +82,27 @@ class Info:
 
         #--------------- for StoDyn methods -----------------
         if "stodyn" in input_dict["optimization_method"]:
+            if "correlated" in input_dict["optimization_method"]:
+                if not "Dtherm" in input_dict:
+                    raise ValueError("Dtherm for correlated methods is missing in the info.json")
+                self.Dtherm = input_dict["Dtherm"]
             if "match_bro" in input_dict["optimization_method"]:
+                # #match SGD SDE
+                # self.mpow = 1.0
+                # self.a0_r = 1.0
+                # self.alpha = -abs(self.eps/0.75)
+                # self.D0 = (0.75 - 0.75*0.75)*np.power(self.alpha*2.0*self.r,2.0)
+
+                #match bro SDE
                 self.mpow = 1.0
                 self.a0_r = 1.0
-                self.alpha = -abs(self.eps/0.75)
-                self.D0 = (0.75 - 0.75*0.75)*np.power(self.alpha*2.0*self.r,2.0)
+                self.alpha = -abs(self.eps)
+                self.D0 = np.power(self.eps*2.0*self.r,2.0)/3.0
+            elif "match_ro" in input_dict["optimization_method"]:
+                self.mpow = 1.0
+                self.a0_r = 1.0
+                self.alpha = 0.0
+                self.D0 = np.power(self.eps*2.0*self.r,2.0)/(3.0*self.dim)
             elif "match_sgd" in input_dict["optimization_method"]:
                 self.mpow = 1.0
                 self.a0_r = 1.0
@@ -81,6 +112,7 @@ class Info:
                 raise ValueError("alpha for stodyn method is missing in the info.json")
             elif not "D0" in input_dict:
                 raise ValueError("D0 for stodyn method is missing in the info.json")
+
         #--------------- scale the learning rate/ kick size/ alpha to the unit of radius----
         if hasattr(self,"lr"):
             self.lr = -abs(self.lr)*2.0*self.r
@@ -127,7 +159,13 @@ def initialize_position(input:Info):
 
 def construct_algorithm(input:Info,x0:np.array):
     boxv = input.box_size
-    optimization_method = input.optimization_method.replace("_match_bro","")
+    optimization_method = input.optimization_method
+    if "_match_bro" in input.optimization_method:
+        optimization_method = input.optimization_method.replace("_match_bro","")
+    elif "_match_sgd" in input.optimization_method:
+        optimization_method = input.optimization_method.replace("_match_sgd","")
+    elif "_match_ro" in input.optimization_method:
+        optimization_method = input.optimization_method.replace("_match_ro","")
     print(optimization_method)
     if input.use_clist == "on":
         if "particlewise_bro" == optimization_method:
@@ -151,6 +189,20 @@ def construct_algorithm(input:Info,x0:np.array):
                 return algorithms.NonReciprocalPairwiseBROCList3D(input.eps,np.full(input.N,input.r),boxv,x0,1.0,True)
             elif input.dim == 4:
                 return algorithms.NonReciprocalPairwiseBROCList4D(input.eps,np.full(input.N,input.r),boxv,x0,1.0,True)
+        elif "correlated_pairwise_bro" == optimization_method:
+            if input.dim == 2:
+                return algorithms.CorrelatedPairwiseBROCList2D(input.eps,input.corr,np.full(input.N,input.r),boxv,x0,1.0,True)
+            elif input.dim == 3:
+                return algorithms.CorrelatedPairwiseBROCList3D(input.eps,input.corr,np.full(input.N,input.r),boxv,x0,1.0,True)
+            elif input.dim == 4:
+                return algorithms.CorrelatedPairwiseBROCList4D(input.eps,input.corr,np.full(input.N,input.r),boxv,x0,1.0,True)
+        elif "correlated_pairwise_ro" == optimization_method:
+            if input.dim == 2:
+                return algorithms.CorrelatedPairwiseROCList2D(input.eps,input.corr_mag,input.corr_dir,np.full(input.N,input.r),boxv,x0,1.0,True)
+            elif input.dim == 3:
+                return algorithms.CorrelatedPairwiseROCList3D(input.eps,input.corr_mag,input.corr_dir,np.full(input.N,input.r),boxv,x0,1.0,True)
+            elif input.dim == 4:
+                return algorithms.CorrelatedPairwiseROCList4D(input.eps,input.corr_mag,input.corr_dir,np.full(input.N,input.r),boxv,x0,1.0,True)
         elif "inversepower_probabilistic_particlewise_sgd" == optimization_method:
             if input.dim == 2:
                 return algorithms.InversePowerProbParticlewiseSGDCList2D(input.mpow,input.a0,input.lr,input.prob,np.full(input.N,input.r),boxv,x0,1.0,True)
@@ -165,6 +217,13 @@ def construct_algorithm(input:Info,x0:np.array):
                 return algorithms.InversePowerProbPairwiseSGDCList3D(input.mpow,input.a0,input.lr,input.prob,np.full(input.N,input.r),boxv,x0,1.0,True)
             elif input.dim == 4:
                 return algorithms.InversePowerProbPairwiseSGDCList4D(input.mpow,input.a0,input.lr,input.prob,np.full(input.N,input.r),boxv,x0,1.0,True)
+        elif "inversepower_correlated_probabilistic_pairwise_sgd" == optimization_method:
+            if input.dim == 2:
+                return algorithms.InversePowerCorrelatedProbPairwiseSGDCList2D(input.mpow,input.a0,input.lr,input.prob,input.corr,np.full(input.N,input.r),boxv,x0,1.0,True)
+            elif input.dim == 3:
+                return algorithms.InversePowerCorrelatedProbPairwiseSGDCList3D(input.mpow,input.a0,input.lr,input.prob,input.corr,np.full(input.N,input.r),boxv,x0,1.0,True)
+            elif input.dim == 4:
+                return algorithms.InversePowerCorrelatedProbPairwiseSGDCList4D(input.mpow,input.a0,input.lr,input.prob,input.corr,np.full(input.N,input.r),boxv,x0,1.0,True)
         elif "inversepower_particlewise_stodyn" == optimization_method:
             if input.dim == 2:
                 return algorithms.InversePowerParticlewiseStoDynCList2D(input.mpow,input.a0,input.alpha,input.D0,np.full(input.N,input.r),boxv,x0,1.0,True)
@@ -186,6 +245,20 @@ def construct_algorithm(input:Info,x0:np.array):
                 return algorithms.InversePowerNonReciprocalPairwiseStoDynCList3D(input.mpow,input.a0,input.alpha,input.D0,np.full(input.N,input.r),boxv,x0,1.0,True)
             elif input.dim == 4:
                 return algorithms.InversePowerNonReciprocalPairwiseStoDynCList4D(input.mpow,input.a0,input.alpha,input.D0,np.full(input.N,input.r),boxv,x0,1.0,True)
+        elif "inversepower_correlated_pairwise_stodyn" == optimization_method:
+            if input.dim == 2:
+                return algorithms.InversePowerCorrelatedPairwiseStoDynCList2D(input.mpow,input.a0,input.alpha,input.D0,input.corr,input.Dtherm,np.full(input.N,input.r),boxv,x0,1.0,True)
+            elif input.dim == 3:
+                return algorithms.InversePowerCorrelatedPairwiseStoDynCList3D(input.mpow,input.a0,input.alpha,input.D0,input.corr,input.Dtherm,np.full(input.N,input.r),boxv,x0,1.0,True)
+            elif input.dim == 4:
+                return algorithms.InversePowerCorrelatedPairwiseStoDynCList4D(input.mpow,input.a0,input.alpha,input.D0,input.corr,input.Dtherm,np.full(input.N,input.r),boxv,x0,1.0,True)
+        elif "inversepower_correlated_pairwise_undirected_stodyn" == optimization_method:
+            if input.dim == 2:
+                return algorithms.InversePowerCorrelatedPairwiseUndirectedStoDynCList2D(input.mpow,input.a0,input.alpha,input.D0,input.corr,input.Dtherm,np.full(input.N,input.r),boxv,x0,1.0,True)
+            elif input.dim == 3:
+                return algorithms.InversePowerCorrelatedPairwiseUndirectedStoDynCList3D(input.mpow,input.a0,input.alpha,input.D0,input.corr,input.Dtherm,np.full(input.N,input.r),boxv,x0,1.0,True)
+            elif input.dim == 4:
+                return algorithms.InversePowerCorrelatedPairwiseUndirectedStoDynCList4D(input.mpow,input.a0,input.alpha,input.D0,input.corr,input.Dtherm,np.full(input.N,input.r),boxv,x0,1.0,True)
         else:
             raise ValueError(optimization_method + "is not a valid input") 
     else:
@@ -213,28 +286,18 @@ algo = construct_algorithm(info,x)
 if info.zoom_rate > 0:
     algo.set_zoom_steps(starting_step = info.zoom_start,ending_step = info.zoom_end,
                         zoom_rate = info.zoom_rate)
+print("R = {}".format(info.r))
+print("N = {}".format(info.N))
+# print("alpha = {}".format(info.alpha))
+# print("D0 = {}".format(info.D0))
 print(algo)
 #---------------------------the simulation starts------------------------------------------
 print("--------Simulation starts--------")
 t1 = time.time()
-potential_based_methods = ["inversepower_probabilistic_particlewise_sgd",
-                   "inversepower_probabilistic_pairwise_sgd",
-                   "inversepower_particlewise_stodyn",
-                   "inversepower_reciprocal_pairwise_stodyn",
-                   "inversepower_nonreciprocal_pairwise_stody"]
-if info.optimization_method in potential_based_methods:
-    # annealing if it is a potential based method
-    n_anneal = info.n_anneal if hasattr(info,"n_anneal") else 0
-    algo.run(n_steps = info.n_steps + 1, n_save = info.n_save, n_rec = info.n_rec,n_anneal = n_anneal,
+algo.run(n_steps = info.n_steps + 1, n_save = info.n_save, n_rec = info.n_rec,
          starting_step = t0, cutoff = 1.0 - info.cutoff,
          output_dir = loc,save_mode = info.save_mode,
          compression = (info.compression=="on"))
-else:
-    algo.run(n_steps = info.n_steps + 1, n_save = info.n_save, n_rec = info.n_rec,
-         starting_step = t0, cutoff = 1.0 - info.cutoff,
-         output_dir = loc,save_mode = info.save_mode,
-         compression = (info.compression=="on"))
-    
 t2 = time.time()
 print("--------Simulation ends--------")
 print("This simulation took " + str(t2-t1) + " secs")

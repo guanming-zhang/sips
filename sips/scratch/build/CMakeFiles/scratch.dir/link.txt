@@ -1,0 +1,1 @@
+/usr/bin/c++ -Wall -Wextra -pedantic -O3 -fPIC -march=native -flto CMakeFiles/scratch.dir/scratch_1.cpp.o -o scratch  /usr/lib/gcc/x86_64-linux-gnu/9/libgomp.so /usr/lib/x86_64-linux-gnu/libpthread.so 

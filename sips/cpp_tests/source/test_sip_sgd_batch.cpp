@@ -134,4 +134,3 @@ TEST_F(SIPSgdBatchTest, ParticlewiseSGD){
     double e = dist_vec(d,d_ref)/norm(d_ref);
     EXPECT_LT(e,1e-12) << "the relative error between sgd gradient and accumulated graident = " << e;
 }
-

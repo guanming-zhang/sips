@@ -128,5 +128,35 @@ public:
         CellListPairwiseKicker<NonReciprocalUniformNoise,ha::periodic_distance<ndim> >::get_kick(coords,disp);
     }
 };
+
+//Correlated Pairwise BRO
+template <size_t ndim>
+class CorrelatedPairwiseBiasedKickerPeriodicCellLists : public ha::CellListPairwiseKicker<CorrelatedUniformNoise,ha::periodic_distance<ndim> > {
+public:
+    const std::vector<double> m_boxv;
+    const size_t m_ndim;
+    CorrelatedPairwiseBiasedKickerPeriodicCellLists(double kick_size, double correlation,
+                std::vector<double> const radii, std::vector<double> const boxv,
+                const double ncellx_scale=1.0, const bool balance_omp=true)
+        : CellListPairwiseKicker<CorrelatedUniformNoise,ha::periodic_distance<ndim> >
+        (std::make_shared<ha::periodic_distance<ndim> >(boxv),
+        boxv,
+        2.0 * (*std::max_element(radii.begin(), radii.end())), // rcut,
+        ncellx_scale,
+        radii,
+        kick_size,
+        balance_omp),
+        m_boxv(boxv),
+        m_ndim(ndim)
+    {
+        for (size_t i=0;i<this->m_kAcc.m_noises.size();i++){
+            this->m_kAcc.m_noises[i]->set_correlation(correlation);
+        }
+    }
+    void get_displacement(std::vector<double> const & coords, std::vector<double> & disp){
+        CellListPairwiseKicker<CorrelatedUniformNoise,ha::periodic_distance<ndim> >::get_kick(coords,disp);
+    }
+};
+
 }
 #endif

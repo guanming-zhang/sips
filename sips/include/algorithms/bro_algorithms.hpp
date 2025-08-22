@@ -47,7 +47,18 @@ public:
                 {}
 };
 
-
+template<size_t ndim>
+class correlated_pairwise_bro_clist: public base_nonpotential_algorithm<ha::CorrelatedPairwiseBiasedKickerPeriodicCellLists<ndim> >{
+public: 
+    double m_kick_size;
+    correlated_pairwise_bro_clist(double kick_size, double correlation, std::vector<double> const radii, 
+                  std::vector<double> const boxv,std::vector<double> init_coords,
+                  const double ncellx_scale=1.0, const bool balance_omp=true):
+             base_nonpotential_algorithm<ha::CorrelatedPairwiseBiasedKickerPeriodicCellLists<ndim> >(
+                    std::make_shared<ha::CorrelatedPairwiseBiasedKickerPeriodicCellLists<ndim>>(kick_size,correlation,radii,boxv,ncellx_scale,balance_omp),
+                     boxv,init_coords)
+                {}
+};
 
 
 #endif

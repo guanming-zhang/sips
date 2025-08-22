@@ -81,22 +81,6 @@ public:
             m_batch_pairs.resize(1);
         #endif 
     }
-    
-    void set_grad_scale_factor(double f){
-        this->m_grad_scale_factor =f;
-    }
-
-    double get_grad_scale_factor(){
-        return this->m_grad_scale_factor;
-    }
-
-    void set_prob(double p){
-        this->m_prob = p;
-    }
-
-    double get_prob(){
-        return this->m_prob;
-    }
 
     void reset_data(const std::vector<double> * coords, std::vector<double> * gradient) {
         m_coords = coords;
@@ -191,24 +175,6 @@ public:
         :CellListPotential<pairwise_interaction, distance_policy>(interaction, dist, boxvec,rcut, ncellx_scale,radii,balance_omp),
          m_ppegAcc(interaction, dist, radii, grad_scale_factor,prob),
          m_prob(prob){}
-    
-    void set_grad_scale_factor(double f){
-        this->m_ppegAcc.set_grad_scale_factor(f);
-    }
-    
-    double get_grad_scale_factor(){
-        return this->m_ppegAcc.get_grad_scale_factor();
-    }
-    
-    void set_prob(double p){
-        this->m_ppegAcc.set_prob(p);
-        m_prob = p;
-    }
-    
-    double get_prob(){
-        return this->m_ppegAcc.get_prob();
-    }
-
 
     virtual double get_batch_energy_gradient(std::vector<double> const & coords, std::vector<double> & grad)
     {

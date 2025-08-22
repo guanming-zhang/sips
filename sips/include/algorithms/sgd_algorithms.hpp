@@ -15,20 +15,6 @@ public:
                     std::make_shared<ha::InversePowerPeriodicProbabilisticPairBatchCellLists<ndim> >(pow,eps,lr,prob,radii,boxv,ncellx_scale,balance_omp),
                      boxv,init_coords)
                 {}
-    virtual void anneal(size_t n_steps){
-        // annealing process: relax the system with zero noise and small learning rate
-        // for n_steps
-        double lr = this->m_potential->get_lr();
-        double prob = this->m_potential->get_prob();
-        this->m_potential->set_lr(0.1*lr);
-        this->m_potential->set_prob(1.0); // prob=1.0 --> noiseless
-        for (size_t i=0;i<n_steps;i++){
-            this->one_step();
-        }
-        // recover the state before annealing
-        this->m_potential->set_lr(lr);
-        this->m_potential->set_prob(prob);
-    }
 };
 
 template<size_t ndim>
@@ -42,22 +28,20 @@ public:
                     std::make_shared<ha::InversePowerPeriodicProbabilisticParticleBatchCellLists<ndim> >(pow,eps,lr,prob,radii,boxv,ncellx_scale,balance_omp),
                      boxv,init_coords)
                 {}
-    virtual void anneal(size_t n_steps){
-        // annealing process: relax the system with zero noise and small learning rate
-        // for n_steps
-        double lr = this->m_potential->get_lr();
-        double prob = this->m_potential->get_prob();
-        this->m_potential->set_lr(0.1*lr);
-        this->m_potential->set_prob(1.0); // prob=1.0 --> noiseless
-        for (size_t i=0;i<n_steps;i++){
-            this->one_step();
-        }
-        // recover the state before annealing
-        this->m_potential->set_lr(lr);
-        this->m_potential->set_prob(prob);
-    }
 };
 
+template<size_t ndim>
+class inversepower_correlated_probabilistic_pairwise_sgd_clist: public base_potential_algorithm<ha::InversePowerPeriodicCorrelatedProbabilisticPairBatchCellLists<ndim> >{
+public: 
+    inversepower_correlated_probabilistic_pairwise_sgd_clist(double pow, double eps, double lr, double prob, double correlation,
+                  std::vector<double> const radii, 
+                  std::vector<double> const boxv,std::vector<double> init_coords,
+                  const double ncellx_scale=1.0, const bool balance_omp=true):
+            base_potential_algorithm<ha::InversePowerPeriodicCorrelatedProbabilisticPairBatchCellLists<ndim> >(
+                    std::make_shared<ha::InversePowerPeriodicCorrelatedProbabilisticPairBatchCellLists<ndim> >(pow,eps,lr,prob,correlation,radii,boxv,ncellx_scale,balance_omp),
+                     boxv,init_coords)
+                {}
+};
 
 
 

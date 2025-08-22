@@ -29,7 +29,7 @@ protected:
     std::shared_ptr<pairwise_interaction> m_interaction;
     std::shared_ptr<distance_policy> m_dist;
     // create different generators for different threads to avoid race condition
-    std::vector<noise_type*> m_noises; 
+    // std::vector<noise_type*> m_noises; 
     const std::vector<double> * m_coords;
     const std::vector<double> m_radii;
     std::vector<double*> m_energies;
@@ -37,6 +37,7 @@ protected:
     double m_grad_scale_factor; // the scale_factor for the gradient
 
 public:
+    std::vector<noise_type*> m_noises; 
     std::vector<double> * m_gradient;
     ~PairwiseStochasticForceAccumulator()
     {
@@ -79,21 +80,7 @@ public:
         m_noises[0] = new noise_type(0.0,1.0,noise_scale);
         #endif
     }
-    void set_grad_scale_factor(double f){
-        this->m_grad_scale_factor = f;
-    }
 
-    double get_grad_scale_factor(){
-        return this->m_grad_scale_factor;
-    }
-
-    void set_noise_scale(double n){
-        this->m_noise_scale = n;
-    }
-
-    double get_noise_scale(){
-        return this->m_noise_scale;
-    }
     void reset_data(const std::vector<double> * coords, std::vector<double> * gradient) {
         m_coords = coords;
         #ifdef _OPENMP
@@ -174,7 +161,7 @@ public:
 template <typename pairwise_interaction, typename distance_policy, typename noise_type>
 class PairwiseNoisyCellListPotential : public ha::CellListPotential<pairwise_interaction,distance_policy> {
 protected:
-    PairwiseStochasticForceAccumulator<pairwise_interaction, distance_policy, noise_type> m_psfAcc;
+   PairwiseStochasticForceAccumulator<pairwise_interaction, distance_policy, noise_type> m_psfAcc;
 public:
     ~PairwiseNoisyCellListPotential(){}
      PairwiseNoisyCellListPotential(
@@ -190,22 +177,6 @@ public:
           m_psfAcc(interaction, dist, radii, grad_scale_factor, noise_scale)
             {
          }
-    
-    void set_grad_scale_factor(double f){
-        m_psfAcc.set_grad_scale_factor(f);
-    }
-    
-    double get_grad_scale_factor(){
-        return m_psfAcc.get_grad_scale_factor();
-    }
-    
-    void set_noise_scale(double n){
-        m_psfAcc.set_noise_scale(n);
-    }
-    
-    double get_noise_scale(){
-        return m_psfAcc.get_noise_scale();
-    }
 
     virtual double get_stochastic_force(std::vector<double> const & coords, std::vector<double> & grad)
     {

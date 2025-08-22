@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC  -Wall -Wextra -pedantic -O3 -fPIC -march=native -flto -flto -shared  -o sips.cpython-312-x86_64-linux-gnu.so CMakeFiles/sips.dir/src/pybind_wrapper.cpp.o  /usr/lib/gcc/x86_64-linux-gnu/9/libgomp.so /usr/lib/x86_64-linux-gnu/libpthread.so 

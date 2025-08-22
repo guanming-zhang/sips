@@ -1,0 +1,3 @@
+/home/sa7483/sips_project/sips-main/sips/build/CMakeFiles/sips.dir
+/home/sa7483/sips_project/sips-main/sips/build/CMakeFiles/edit_cache.dir
+/home/sa7483/sips_project/sips-main/sips/build/CMakeFiles/rebuild_cache.dir

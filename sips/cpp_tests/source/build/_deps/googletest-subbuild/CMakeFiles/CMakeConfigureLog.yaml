@@ -1,0 +1,11 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/ext3/miniconda3/share/cmake-3.26/Modules/CMakeDetermineSystem.cmake:204 (message)"
+      - "CMakeLists.txt:10 (project)"
+    message: |
+      The system is: Linux - 5.14.0-284.40.1.el9_2.x86_64 - x86_64
+...

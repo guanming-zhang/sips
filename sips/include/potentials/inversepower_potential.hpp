@@ -14,7 +14,9 @@
 #include "hyperalg/meta_pow.hpp"
 #include "hyperalg/base_interaction.hpp"
 #include "sips/cell_list_potential_with_probabilistic_batch.hpp"
+#include "sips/cell_list_potential_with_correlated_probabilistic_batch.hpp"
 #include "sips/cell_list_potential_with_noise.hpp"
+#include "sips/cell_list_potential_with_undirected_noise.hpp"
 //#include "sips/cell_list_potential_with_selective_batch.hpp"
 
 namespace ha{
@@ -184,23 +186,45 @@ public:
         PairwiseProbabilisticCellListPotential<ha::InversePowerInteraction, ha::periodic_distance<ndim> >::get_batch_energy_gradient(coords,disp);
 
     }
-    void set_lr(double f){
-        this->set_grad_scale_factor(f);
-    }
-
-    double get_lr(){
-        return this->get_grad_scale_factor();
-    }
-
-    void set_prob(double p){
-        PairwiseProbabilisticCellListPotential<ha::InversePowerInteraction, ha::periodic_distance<ndim> >::set_prob(p);
-    }
-
-    double get_prob(){
-        return PairwiseProbabilisticCellListPotential<ha::InversePowerInteraction, ha::periodic_distance<ndim> >::get_prob();
-    }
 
 };
+
+
+
+template <size_t ndim>
+class InversePowerPeriodicCorrelatedProbabilisticPairBatchCellLists : public PairwiseCorrelatedProbabilisticCellListPotential< ha::InversePowerInteraction, ha::periodic_distance<ndim>,CorrelatedBernoulliNoise > {
+public:
+    const std::vector<double> m_boxv;
+    const size_t m_ndim;
+    InversePowerPeriodicCorrelatedProbabilisticPairBatchCellLists(double pow, double eps, double lr, double prob, double correlation,
+        std::vector<double> const radii, std::vector<double> const boxv,
+        const double ncellx_scale=1.0, const bool balance_omp=true)
+        : PairwiseCorrelatedProbabilisticCellListPotential<ha::InversePowerInteraction, ha::periodic_distance<ndim>, CorrelatedBernoulliNoise >(std::make_shared<ha::InversePowerInteraction>(pow, eps),
+        std::make_shared<ha::periodic_distance<ndim> >(boxv),
+        boxv,
+        2.0 * (*std::max_element(radii.begin(), radii.end())), // rcut,
+        ncellx_scale,
+        radii,
+        lr,
+        prob,
+        balance_omp),
+        m_boxv(boxv),
+        m_ndim(ndim)
+    {
+        for (size_t i=0;i<this->m_ppegAcc.m_noises.size();i++){
+            this->m_ppegAcc.m_noises[i]->set_correlation_and_p(correlation, prob);
+        }
+    }
+    virtual void get_displacement(std::vector<double> const & coords, std::vector<double> & disp){
+        PairwiseCorrelatedProbabilisticCellListPotential<ha::InversePowerInteraction, ha::periodic_distance<ndim>, CorrelatedBernoulliNoise >::get_batch_energy_gradient(coords,disp);
+
+    }
+};
+
+
+
+
+
 
 /* ----------- inverse power potential with probabilistic particle batch --------- */ 
 template <size_t ndim>
@@ -236,21 +260,7 @@ public:
         m_batch_particles.resize(1);
         #endif  
     }       
-    void set_lr(double f){
-        m_lr = f;
-    }
-
-    double get_lr(){
-        return m_lr;
-    }
-
-    void set_prob(double p){
-        m_prob = p;
-    }
-
-    double get_prob(){
-        return m_prob;
-    }
+    
     virtual double get_batch_energy_gradient(std::vector<double> const & coords, std::vector<double> & grad){
         // update the displacement
         CellListPotential<ha::InversePowerInteraction, ha::periodic_distance<ndim> >::get_energy_gradient(coords,grad);
@@ -352,23 +362,6 @@ public:
     virtual void get_displacement(std::vector<double> const & coords, std::vector<double> & disp){
         PairwiseNoisyCellListPotential<ha::InversePowerInteraction, ha::periodic_distance<ndim>, ReciprocalGaussianNoise>::get_stochastic_force(coords,disp);
     }
-    
-    void set_alpha(double a){
-        this->m_psfAcc.set_grad_scale_factor(a);
-    }
-
-    double get_alpha(){
-        return this->m_psfAcc.get_grad_scale_factor();
-    }
-
-    void set_D0(double D0){
-        this->m_psfAcc.set_noise_scale(sqrt(D0));
-    }
-
-    double get_D0(){
-        double sqrt_D = this->m_psfAcc.get_noise_scale();
-        return sqrt_D*sqrt_D;
-    }
 
 };
 
@@ -393,28 +386,120 @@ public:
         m_boxv(boxv),
         m_ndim(ndim)
     {}
-    
-    void set_alpha(double a){
-        this->m_psfAcc.set_grad_scale_factor(a);
-    }
-
-    double get_alpha(){
-        return this->m_psfAcc.get_grad_scale_factor();
-    }
-
-    void set_D0(double D0){
-        this->m_psfAcc.set_noise_scale(sqrt(D0));
-    }
-
-    double get_D0(){
-        double sqrt_D = this->m_psfAcc.get_noise_scale();
-        return sqrt_D*sqrt_D;
-    }
-
     virtual void get_displacement(std::vector<double> const & coords, std::vector<double> & disp){
          PairwiseNoisyCellListPotential<ha::InversePowerInteraction, ha::periodic_distance<ndim>, NonReciprocalGaussianNoise>::get_stochastic_force(coords,disp);
 
     }
+
+};
+
+
+template <size_t ndim>
+class InversePowerPeriodicCorrelatedPairwiseNoiseCellLists : public ha::PairwiseNoisyCellListPotential< ha::InversePowerInteraction, ha::periodic_distance<ndim>,CorrelatedGaussianNoise> {
+public:
+    const std::vector<double> m_boxv;
+    const size_t m_ndim;
+    InversePowerPeriodicCorrelatedPairwiseNoiseCellLists(double pow, double eps, double alpha, double D0, double correlation, double Dtherm,
+        std::vector<double> const radii, std::vector<double> const boxv, 
+        const double ncellx_scale=1.0, const bool balance_omp=true)
+        :  PairwiseNoisyCellListPotential<ha::InversePowerInteraction, ha::periodic_distance<ndim>, CorrelatedGaussianNoise>(
+            std::make_shared<ha::InversePowerInteraction>(pow, eps),
+        std::make_shared<ha::periodic_distance<ndim> >(boxv),
+        boxv,
+        2.0 * (*std::max_element(radii.begin(), radii.end())), // rcut,
+        ncellx_scale,
+        radii,
+        alpha,
+        sqrt(D0),
+        balance_omp),
+        m_boxv(boxv), m_ndim(ndim), m_Dtherm(Dtherm),
+        m_thermal_noise_generator(0.0, 1.0)
+    {
+        for (size_t i=0;i<this->m_psfAcc.m_noises.size();i++){
+            this->m_psfAcc.m_noises[i]->set_correlation(correlation);
+        }
+    }
+    virtual void get_displacement(std::vector<double> const & coords, std::vector<double> & disp){
+        PairwiseNoisyCellListPotential<ha::InversePowerInteraction, ha::periodic_distance<ndim>, CorrelatedGaussianNoise>::get_stochastic_force(coords,disp);
+        std::vector<double> thermal_noise(disp.size());
+        for (size_t i = 0; i < thermal_noise.size(); ++i) {
+            thermal_noise[i] = m_thermal_noise_generator.rand();
+        }
+        for (size_t i = 0; i < disp.size(); i++) {
+            disp[i] += sqrt(2.0*m_Dtherm)*thermal_noise[i];
+        }
+    }
+
+    // only for testing purposes
+    void get_thermal_displacement_only(std::vector<double> & disp)
+    {
+        std::vector<double> thermal_noise(disp.size());
+        for (size_t i = 0; i < thermal_noise.size(); ++i) {
+            thermal_noise[i] = m_thermal_noise_generator.rand();
+        }
+        for (size_t i = 0; i < disp.size(); i++) {
+            disp[i] += sqrt(2.0*m_Dtherm)*thermal_noise[i];
+        }
+    }
+
+private:
+    double m_Dtherm;
+    GaussianNoise m_thermal_noise_generator;
+
+};
+
+
+template <size_t ndim>
+class InversePowerPeriodicCorrelatedPairwiseUndirectedNoiseCellLists : public ha::PairwiseUndirectedNoisyCellListPotential< ha::InversePowerInteraction, ha::periodic_distance<ndim>,CorrelatedGaussianNoise> {
+public:
+    const std::vector<double> m_boxv;
+    const size_t m_ndim;
+    InversePowerPeriodicCorrelatedPairwiseUndirectedNoiseCellLists(double pow, double eps, double alpha, double D0, double correlation, double Dtherm,
+        std::vector<double> const radii, std::vector<double> const boxv, 
+        const double ncellx_scale=1.0, const bool balance_omp=true)
+        :  PairwiseUndirectedNoisyCellListPotential<ha::InversePowerInteraction, ha::periodic_distance<ndim>, CorrelatedGaussianNoise>(
+            std::make_shared<ha::InversePowerInteraction>(pow, eps),
+        std::make_shared<ha::periodic_distance<ndim> >(boxv),
+        boxv,
+        2.0 * (*std::max_element(radii.begin(), radii.end())), // rcut,
+        ncellx_scale,
+        radii,
+        alpha,
+        sqrt(D0),
+        balance_omp),
+        m_boxv(boxv), m_ndim(ndim), m_Dtherm(Dtherm),
+        m_thermal_noise_generator(0.0, 1.0)
+    {
+        for (size_t i=0;i<this->m_psfAcc.m_noises.size();i++){
+            this->m_psfAcc.m_noises[i]->set_correlation(correlation);
+        }
+    }
+    virtual void get_displacement(std::vector<double> const & coords, std::vector<double> & disp){
+        PairwiseUndirectedNoisyCellListPotential<ha::InversePowerInteraction, ha::periodic_distance<ndim>, CorrelatedGaussianNoise>::get_stochastic_force(coords,disp);
+        std::vector<double> thermal_noise(disp.size());
+        for (size_t i = 0; i < thermal_noise.size(); ++i) {
+            thermal_noise[i] = m_thermal_noise_generator.rand();
+        }
+        for (size_t i = 0; i < disp.size(); i++) {
+            disp[i] += sqrt(2.0*m_Dtherm)*thermal_noise[i];
+        }
+    }
+
+    // only for testing purposes
+    void get_thermal_displacement_only(std::vector<double> & disp)
+    {
+        std::vector<double> thermal_noise(disp.size());
+        for (size_t i = 0; i < thermal_noise.size(); ++i) {
+            thermal_noise[i] = m_thermal_noise_generator.rand();
+        }
+        for (size_t i = 0; i < disp.size(); i++) {
+            disp[i] += sqrt(2.0*m_Dtherm)*thermal_noise[i];
+        }
+    }
+
+private:
+    double m_Dtherm;
+    GaussianNoise m_thermal_noise_generator;
 
 };
 
@@ -450,23 +535,6 @@ public:
         m_rand_generators.push_back(ptr);
         #endif  
     }
-
-    void set_alpha(double a){
-        m_alpha = a;
-    }
-
-    double get_alpha(){
-        return m_alpha;
-    }
-
-    void set_D0(double D0){
-        m_D0 = D0;
-    }
-
-    double get_D0(){
-        return m_D0;
-    }
-
     virtual void get_stochastic_force(std::vector<double> const & coords, std::vector<double> & grad){
         CellListPotential<ha::InversePowerInteraction, ha::periodic_distance<ndim> >::get_energy_gradient(coords,grad);
         size_t natoms = coords.size()/ndim;

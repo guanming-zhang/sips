@@ -27,12 +27,13 @@ class PairwiseKickAccumulator {
 protected:
     const static size_t m_ndim = distance_policy::_ndim;
     double m_noise_scale;
-    std::vector<noise_type*> m_noises;
+    // std::vector<noise_type*> m_noises;
     std::shared_ptr<distance_policy> m_dist;
     const std::vector<double> * m_coords;
     const std::vector<double> m_radii;
 
 public:
+    std::vector<noise_type*> m_noises;
     /** record the total kick for each particle*/
     std::vector<double> *m_kick; 
 

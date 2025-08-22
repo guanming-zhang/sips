@@ -6,20 +6,36 @@
 #include <iostream>
 
 int main(){
-    std::vector<double> x = {-1.0,0.0, 0.0,1.0, 1.0,0.0}, radii = {sqrt(2),sqrt(2),sqrt(2)};
-    std::vector<double> boxv = {5.0,5.0};    
-    //pariticlewise_bro_clist<2> a(0.1,radii,boxv,x);
-    inversepower_nonreciprocal_pairwise_sd_clist<2> a(2.0,1.0,-0.1,0.1,radii,boxv,x);
-    double e_f = a.avg_energy_flucuation(0.05,4000000);
-    ha::InversePowerPeriodicCellLists<2> pot(2.0,1.0,radii,boxv);
-    std::vector<double> hessian;
-    hessian.resize(36);
-    pot.get_hessian(x,hessian);
-    double laplacian = 0.0;
-    for (size_t i = 0; i < x.size(); i++){
-        laplacian += hessian[i*x.size() + i];
+
+    double corr_g = 0.5, corr_u = 0.5;
+
+    CorrelatedGaussianNoise gen1(0.0, 1.0);
+    CorrelatedUniformNoise gen2(0.0, 1.0);
+
+    gen1.set_correlation(corr_g);
+    gen2.set_correlation(corr_u);
+
+    double x1, x2;
+    double u1, u2;
+    double n_repeat = 10000;
+    double mean_g = 0.0, cov_g = 0.0, mean_u = 0.0, cov_u = 0.0, cross_cov_ug = 0.0;
+
+    for (size_t i = 0; i < n_repeat; i++) {
+        gen1.rand2(&x1, &x2);
+        gen2.rand2(&u1, &u2);
+
+        mean_g += x1 / n_repeat;
+        cov_g += (x1 * x2) / n_repeat;
+        mean_u += u1 / n_repeat;
+        cov_u += ((u1*u2 - 0.25)/(1.0/12.0)) / n_repeat;
+        cross_cov_ug += (x1 * u1) / n_repeat;
     }
-    std::cout<<"energy flucuation = "<< e_f*3<<std::endl;
-    std::cout<<"0.5*lapcian = "<<0.5*laplacian<<std::endl;
+
+    std::cout << "mean_gaussian = " << mean_g << std::endl;
+    std::cout << "cov_gaussian = " << cov_g << std::endl;
+    std::cout << "mean_uni = " << mean_u << std::endl;
+    std::cout << "cov_uni = " << cov_u << std::endl;
+    std::cout << "cross_cov_gaussian_uni = " << cross_cov_ug << std::endl;
+
     return 0;
 }
