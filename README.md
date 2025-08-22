@@ -1,6 +1,7 @@
-This code is implemented by Guanming Zhang(base code) and Satyam Anand (random organization and pairwise corrlation).
-This version contains implementation of pairwise, correlated random-organizing systems (random organization, biased random organization, and stochastic gradient descent).
+This repo is implemented by Guanming Zhang (base code) and Satyam Anand (random organization and pairwise corrlated noise). Cell list and pairwise potential implementations are based on https://github.com/martiniani-lab/pele.
 
+This version contains implementation of pairwise, correlated random-organizing systems (random organization, biased random organization, and stochastic gradient descent).
+```text
 ░██████╗██╗██████╗░░██████╗
 ██╔════╝██║██╔══██╗██╔════╝
 ╚█████╗░██║██████╔╝╚█████╗░
@@ -81,8 +82,6 @@ folders
                      !!! do not use add_directories() to include this directory
                          in the project cmake file. It is just a scratch.
 
-*SIPS project is based on hyperalg potentials, at the same time, keeping the hyerperalg 
-as untouched as possible.
 *nolhmann json hearder(https://github.com/nlohmann/json) is applied for processing json files. 
 it is compatible with C++11 and C++14 standard, sometimes not work well with C++17(also depends on 
 the compilor).
