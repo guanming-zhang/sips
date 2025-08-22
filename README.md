@@ -1,4 +1,4 @@
-This codebase is derived from https://github.com/guanming-zhang/sips, created by Guanming Zhang. The original license and copyright notices have been preserved. 
+This code is implemented by Guanming Zhang(base code) and Satyam Anand (random organization and pairwise corrlation).
 This version contains implementation of pairwise, correlated random-organizing systems (random organization, biased random organization, and stochastic gradient descent).
 
 ░██████╗██╗██████╗░░██████╗
